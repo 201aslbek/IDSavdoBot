@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>IDSavdo Store</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #0b0e17;
+            --card-bg: #151a28;
+            --accent-blue: #0066ff;
+            --text-white: #ffffff;
+            --text-gray: #8f9cae;
+            --badge-blue: #0052cc;
+            --badge-purple: #6c5ce7;
+            --glass-bg: rgba(22, 28, 42, 0.92);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --blue-glow: rgba(0, 102, 255, 0.4);
+        }
+
+        body.light-mode {
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-white: #1c1c1e;
+            --text-gray: #6e6e73;
+            --glass-bg: rgba(255, 255, 255, 0.92);
+            --glass-border: rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent !important;
+            outline: none !important;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-white);
+            padding: 0 14px 100px 14px;
+            min-height: 100vh;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            overflow-x: hidden;
+        }
+
+        /* 1. SPLASH SCREEN */
+        #splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #070913;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+        }
+
+        .splash-logo {
+            font-size: 40px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            display: flex;
+            perspective: 1000px;
+        }
+
+        .sand-char {
+            display: inline-block;
+            opacity: 0;
+            filter: blur(12px);
+            transform: translate3d(var(--x), var(--y), var(--z)) rotate(var(--r));
+            animation: assembleSand 1.1s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+            animation-delay: var(--delay);
+        }
+
+        .sand-char.id-text { color: #ffffff; }
+        .sand-char.savdo-text { color: var(--accent-blue); }
+
+        @keyframes assembleSand {
+            to {
+                opacity: 1;
+                filter: blur(0px);
+                transform: translate3d(0, 0, 0) rotate(0deg);
+            }
+        }
+
+        .splash-version {
+            position: absolute;
+            bottom: 35px;
+            font-size: 12px;
+            color: var(--text-gray);
+            letter-spacing: 1px;
+            opacity: 0.7;
+        }
+
+        /* HEADER LOGO */
+        .global-app-header {
+            position: sticky;
+            top: 0;
+            background-color: var(--bg-color);
+            padding: 12px 0 10px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .global-logo {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .global-logo .id-text { color: var(--text-white); }
+        .global-logo .savdo-text { color: var(--accent-blue); }
+
+        /* SAHIFALAR ALMASHGANDA CHIQADIGAN ANIMATSIYA */
+        .page {
+            display: none;
+            opacity: 0;
+            transform: translateY(12px) scale(0.98);
+            transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .page.active-page {
+            display: block;
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            animation: pageFadeIn 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        @keyframes pageFadeIn {
+            0% {
+                opacity: 0;
+                transform: translateY(14px) scale(0.98);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* USER PROFILE BAR */
+        .profile-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+
+        .user-info { display: flex; align-items: center; gap: 10px; }
+
+        .avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background-color: #222;
+        }
+
+        .user-details { display: flex; flex-direction: column; }
+        .user-name { font-size: 15px; font-weight: 600; }
+        .user-username { font-size: 13px; color: var(--text-gray); }
+
+        .coin-badge {
+            background-color: var(--card-bg);
+            padding: 6px 12px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .coin-icon { color: #ffb703; font-size: 15px; }
+
+        /* BALANS KARTASI */
+        .balance-card {
+            background: linear-gradient(135deg, #0052cc 0%, #002b80 100%);
+            border-radius: 18px;
+            padding: 18px;
+            margin-bottom: 18px;
+            box-shadow: 0 8px 20px rgba(0, 82, 204, 0.25);
+            color: #ffffff;
+        }
+
+        .balance-title { font-size: 12px; opacity: 0.8; margin-bottom: 4px; }
+        .balance-amount { font-size: 26px; font-weight: 800; margin-bottom: 16px; }
+
+        .balance-actions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .action-btn {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: none;
+            border-radius: 12px;
+            padding: 10px 4px;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .action-btn:active { opacity: 0.8; }
+
+        /* PRODUCTS GRID */
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .product-card {
+            background-color: var(--card-bg);
+            border-radius: 14px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-bottom: 10px;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            cursor: pointer;
+        }
+
+        .product-card:active { transform: scale(0.97); }
+
+        .card-image-box {
+            width: 100%;
+            height: 95px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: #ffffff;
+        }
+
+        .bg-pubg { background: linear-gradient(135deg, #2b32b2, #1488cc); }
+        .bg-ff { background: linear-gradient(135deg, #f857a6, #ff5858); }
+        .bg-mlbb { background: linear-gradient(135deg, #4776e6, #8e54e9); }
+        .bg-standoff { background: linear-gradient(135deg, #1f1c2c, #928dab); }
+        .bg-stars { background: linear-gradient(135deg, #1d976c, #93f9b9); }
+        .bg-premium { background: linear-gradient(135deg, #8a2387, #e94057, #f27121); }
+        .bg-gifts { background: linear-gradient(135deg, #f7971e, #ffd200); }
+        .bg-blood { background: linear-gradient(135deg, #eb3349, #f45c43); }
+        .bg-bigo { background: linear-gradient(135deg, #11998e, #38ef7d); }
+
+        .badge {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-size: 9px;
+            font-weight: 700;
+            color: #fff;
+            text-transform: uppercase;
+        }
+
+        .badge.global { background-color: var(--badge-blue); }
+        .badge.avto { background-color: var(--badge-purple); }
+        .badge.sng { background-color: #00b894; }
+        .badge.gifts { background-color: #e17055; }
+
+        .star-icon-tag {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            color: #ffb703;
+            font-size: 11px;
+        }
+
+        .product-title {
+            font-size: 11px;
+            font-weight: 700;
+            margin-top: 8px;
+            text-align: center;
+            width: 90%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-white);
+        }
+
+        /* TARIX SAHIFASI STILI */
+        .section-header { font-size: 20px; font-weight: 700; margin-bottom: 14px; }
+
+        .tab-switcher {
+            display: flex;
+            background-color: var(--card-bg);
+            border-radius: 14px;
+            padding: 4px;
+            margin-bottom: 14px;
+        }
+
+        .tab-switcher-btn {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-gray);
+            cursor: pointer;
+        }
+
+        .tab-switcher-btn.active {
+            background-color: var(--accent-blue);
+            color: #ffffff;
+        }
+
+        .sub-filters {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            margin-bottom: 25px;
+            padding-bottom: 4px;
+        }
+
+        .filter-chip {
+            background-color: var(--card-bg);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: var(--text-gray);
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .filter-chip.active { background-color: var(--accent-blue); color: #ffffff; }
+
+        .empty-state { text-align: center; color: var(--text-gray); font-size: 14px; margin-top: 60px; }
+
+        /* SOZLAMALAR SAHIFASI STILI */
+        .settings-user-card {
+            background-color: var(--card-bg);
+            border-radius: 18px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .user-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+        .user-header img { width: 48px; height: 48px; border-radius: 50%; }
+
+        .user-id-badge {
+            font-size: 12px;
+            color: var(--text-gray);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 2px;
+        }
+
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        .stat-box { background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 10px; }
+        .stat-label { font-size: 10px; color: var(--text-gray); text-transform: uppercase; font-weight: 700; }
+        .stat-value { font-size: 15px; font-weight: 700; margin-top: 2px; }
+
+        .section-label {
+            font-size: 11px;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin: 16px 0 8px 4px;
+        }
+
+        .lang-selector {
+            display: flex;
+            background-color: var(--card-bg);
+            border-radius: 18px;
+            padding: 4px;
+            margin-bottom: 16px;
+        }
+
+        .lang-btn {
+            flex: 1;
+            padding: 10px 0;
+            text-align: center;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-gray);
+            cursor: pointer;
+        }
+
+        .lang-btn.active { background-color: var(--accent-blue); color: #ffffff; }
+
+        .settings-menu { background-color: var(--card-bg); border-radius: 18px; overflow: hidden; }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            cursor: pointer;
+        }
+
+        .menu-item:last-child { border-bottom: none; }
+
+        .menu-left { display: flex; align-items: center; gap: 12px; }
+
+        .menu-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .icon-purple { background: rgba(108, 92, 231, 0.15); color: #6c5ce7; }
+        .icon-yellow { background: rgba(255, 183, 3, 0.15); color: #ffb703; }
+        .icon-blue { background: rgba(0, 102, 255, 0.15); color: #0066ff; }
+        .icon-orange { background: rgba(255, 121, 63, 0.15); color: #ff793f; }
+
+        .menu-texts { display: flex; flex-direction: column; }
+        .menu-title { font-size: 13px; font-weight: 600; }
+        .menu-sub { font-size: 11px; color: var(--text-gray); margin-top: 2px; }
+
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #3a3d4a;
+            transition: .3s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider { background-color: var(--accent-blue); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        /* ====================================================== */
+        /* 2. GLASS TAB BAR VA OVAL SWIPE INDICATOR              */
+        /* ====================================================== */
+        .glass-tab-bar {
+            position: fixed;
+            bottom: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 32px);
+            max-width: 400px;
+            height: 62px;
+            
+            background: var(--glass-bg);
+            backdrop-filter: blur(4px) saturate(180%);
+            -webkit-backdrop-filter: blur(5px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: 35px; /* Tab Bar radiusi */
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 0 6px;
+            box-sizing: border-box;
+            z-index: 9999;
+        }
+    
+        /* OVAL TANLANGAN KUPAY (INDIKATOR) */
+        .active-indicator {
+            position: absolute;
+            top: 5px;
+            bottom: 5px;
+            left: 6px;
+            width: calc(33.33% - 4px);
+            
+            /* Radiusi xuddi Tab bar kabi 35px oval pill shaklida */
+            border-radius: 35px; 
+            
+            background: radial-gradient(circle at center, rgba(0, 102, 255, 0.3) 0%, rgba(0, 102, 255, 0.2) 100%);
+            border: 0.1px solid rgba(0, 102, 255, 0.5);
+            box-shadow: 0 0 15px var(--blue-glow);
+            
+            /* Surilganda silliq harakatlanish */
+            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            pointer-events: none;
+        }
+
+        .tab-item {
+            position: relative;
+            flex: 1;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            color: var(--text-gray);
+            cursor: pointer;
+            z-index: 2;
+            transition: color 0.3s ease;
+        }
+
+        .tab-item.active { color: #ffffff; }
+
+        .tab-item i {
+            font-size: 18px;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.3s ease;
+        }
+
+        .tab-item.active i {
+            color: var(--accent-blue);
+            transform: translateY(-2px) scale(1.1);
+            filter: drop-shadow(0 0 6px var(--blue-glow));
+        }
+
+        .tab-title { font-size: 10px; font-weight: 500; transition: color 0.3s ease; }
+        .tab-item.active .tab-title { color: #ffffff; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+    <div id="splash-screen">
+        <div class="splash-logo" id="splash-logo"></div>
+        <div class="splash-version">v1.0.0</div>
+    </div>
+
+    <div class="global-app-header">
+        <div class="global-logo">
+            <span class="id-text">ID</span><span class="savdo-text">Savdo</span>
+        </div>
+    </div>
+
+    <div id="page-home" class="page active-page">
+        <div class="profile-bar">
+            <div class="user-info">
+                <img src="https://via.placeholder.com/100" id="home-user-avatar" class="avatar" alt="User">
+                <div class="user-details">
+                    <span class="user-name" id="home-user-name">Foydalanuvchi</span>
+                    <span class="user-username" id="home-user-username">@username</span>
+                </div>
+            </div>
+            <div class="coin-badge">
+                <i class="fa-solid fa-coins coin-icon"></i>
+                <span id="home-user-coins">0</span>
+            </div>
+        </div>
+
+        <div class="balance-card">
+            <div class="balance-title" data-i18n="balance">BALANS</div>
+            <div class="balance-amount"><span id="home-user-balance">0</span> so'm</div>
+            <div class="balance-actions">
+                <button class="action-btn" onclick="tgAction('deposit')">
+                    <i class="fa-solid fa-wallet"></i>
+                    <span data-i18n="deposit">Hisobni to'ldirish</span>
+                </button>
+                <button class="action-btn" onclick="openPromoModal()">
+                    <i class="fa-solid fa-gift"></i>
+                    <span data-i18n="promo">Bonus kodlar</span>
+                </button>
+                <button class="action-btn" onclick="openSupport()">
+                    <i class="fa-solid fa-headset"></i>
+                    <span data-i18n="support">Qo'llab-quvvatlash</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="products-grid">
+            <div class="product-card" onclick="selectProduct('PUBG MOBILE')">
+                <div class="card-image-box bg-pubg">
+                    <i class="fa-solid fa-star star-icon-tag"></i>
+                    <span class="badge global">Global</span>
+                    <i class="fa-solid fa-gamepad"></i>
+                </div>
+                <div class="product-title">PUBG MOBILE</div>
+            </div>
+
+            <div class="product-card" onclick="selectProduct('FREE FIRE')">
+                <div class="card-image-box bg-ff">
+                    <i class="fa-solid fa-star star-icon-tag"></i>
+                    <span class="badge sng">SNG</span>
+                    <i class="fa-solid fa-fire"></i>
+                </div>
+                <div class="product-title">FREE FIRE</div>
+            </div>
+
+            <div class="product-card" onclick="selectProduct('MOBILE LEGENDS')">
+                <div class="card-image-box bg-mlbb">
+                    <i class="fa-solid fa-star star-icon-tag"></i>
+                    <span class="badge global">Global</span>
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div class="product-title">MOBILE LEG...</div>
+            </div>
+
+            <div class="product-card" onclick="selectProduct('STANDOFF 2')">
+                <div class="card-image-box bg-standoff">
+                    <i class="fa-solid fa-star star-icon-tag"></i>
+                    <span class="badge global">Global</span>
+                    <i class="fa-solid fa-crosshairs"></i>
+                </div>
+                <div class="product-title">STANDOFF 2</div>
+            </div>
+
+            <div class="product-card" onclick="selectProduct('TG STARS')">
+                <div class="card-image-box bg-stars">
+                    <i class="fa-solid fa-star star-icon-tag"></i>
+                    <span class="badge avto">AVTO</span>
+                    <i class="fa-solid fa-star"></i>
+                </div>
+                <div class="product-title">TG STARS</div>
+            </div>
+
+            <div class="product-card" onclick="selectProduct('TG PREMIUM')">
+                <div class="card-image-box bg-premium">
+                    <i class="fa-solid fa-star star-icon-tag"></i>
+                    <span class="badge avto">AVTO</span>
+                    <i class="fa-solid fa-crown"></i>
+                </div>
+                <div class="product-title">TG PREMIUM</div>
+            </div>
+
+            <div class="product-card" onclick="selectProduct('TG GIFTS')">
+                <div class="card-image-box bg-gifts">
+                    <i class="fa-solid fa-star star-icon-tag"></i>
+                    <span class="badge gifts">GIFTS</span>
+                    <i class="fa-solid fa-gift"></i>
+                </div>
+                <div class="product-title">Telegram Sov...</div>
+            </div>
+
+            <div class="product-card" onclick="selectProduct('BLOOD STRIKE')">
+                <div class="card-image-box bg-blood">
+                    <i class="fa-solid fa-star star-icon-tag"></i>
+                    <span class="badge avto">AVTO</span>
+                    <i class="fa-solid fa-skull"></i>
+                </div>
+                <div class="product-title">Blood Strike</div>
+            </div>
+
+            <div class="product-card" onclick="selectProduct('BIGO LIVE')">
+                <div class="card-image-box bg-bigo">
+                    <i class="fa-solid fa-star star-icon-tag"></i>
+                    <span class="badge global">Global</span>
+                    <i class="fa-solid fa-video"></i>
+                </div>
+                <div class="product-title">Bigo Live</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-history" class="page">
+        <div class="section-header" data-i18n="history_title">Tarix</div>
+        
+        <div class="tab-switcher">
+            <div class="tab-switcher-btn active" id="btn-orders" onclick="switchHistoryTab('orders')" data-i18n="tab_orders">Buyurtmalar</div>
+            <div class="tab-switcher-btn" id="btn-finance" onclick="switchHistoryTab('finance')" data-i18n="tab_finance">Moliya</div>
+        </div>
+
+        <div class="sub-filters">
+            <div class="filter-chip active" data-i18n="filter_all">Barchasi</div>
+            <div class="filter-chip" data-i18n="filter_done">Bajarildi</div>
+            <div class="filter-chip" data-i18n="filter_pending">Kutilmoqda</div>
+            <div class="filter-chip" data-i18n="filter_canceled">Bekor qilingan</div>
+        </div>
+
+        <div class="empty-state" data-i18n="no_transactions">Tranzaksiyalar yo'q</div>
+    </div>
+
+    <div id="page-settings" class="page">
+        <div class="settings-user-card">
+            <div class="user-header">
+                <img src="https://via.placeholder.com/100" id="settings-user-avatar" alt="Avatar">
+                <div>
+                    <div class="user-name" id="settings-user-name">Foydalanuvchi</div>
+                    <div class="user-id-badge">
+                        <span>ID: <span id="settings-user-id">00000000</span></span>
+                        <i class="fa-regular fa-copy" onclick="copyUserId()" style="cursor: pointer; margin-left: 4px;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-label" data-i18n="balance">BALANS</div>
+                    <div class="stat-value"><span id="settings-user-balance">0</span> so'm</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label" data-i18n="cashback">KESHBEK</div>
+                    <div class="stat-value" style="color: #ffb703;"><span id="settings-user-cashback">0</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-label" data-i18n="language">TIL</div>
+        <div class="lang-selector">
+            <div class="lang-btn active" id="lang-uz" onclick="changeLanguage('uz')">O'zbekcha</div>
+            <div class="lang-btn" id="lang-ru" onclick="changeLanguage('ru')">Русский</div>
+            <div class="lang-btn" id="lang-en" onclick="changeLanguage('en')">English</div>
+        </div>
+
+        <div class="section-label" data-i18n="services">XIZMATLAR</div>
+        <div class="settings-menu">
+            <div class="menu-item" onclick="inviteFriends()">
+                <div class="menu-left">
+                    <div class="menu-icon icon-purple"><i class="fa-solid fa-user-plus"></i></div>
+                    <div class="menu-texts">
+                        <div class="menu-title" data-i18n="invite_friends">Do'stlarni taklif qilish</div>
+                        <div class="menu-sub" data-i18n="invite_sub">Bonus tangalar yutib oling</div>
+                    </div>
+                </div>
+                <i class="fa-solid fa-chevron-right menu-arrow" style="color: var(--text-gray); font-size: 12px;"></i>
+            </div>
+
+            <div class="menu-item" onclick="openPromoModal()">
+                <div class="menu-left">
+                    <div class="menu-icon icon-yellow"><i class="fa-solid fa-tags"></i></div>
+                    <div class="menu-texts">
+                        <div class="menu-title" data-i18n="promo_codes">Chegirma kodlar</div>
+                        <div class="menu-sub" data-i18n="promo_sub">Kashbek sarflab chegirma kodi yarating</div>
+                    </div>
+                </div>
+                <i class="fa-solid fa-chevron-right menu-arrow" style="color: var(--text-gray); font-size: 12px;"></i>
+            </div>
+
+            <div class="menu-item" onclick="openSupport()">
+                <div class="menu-left">
+                    <div class="menu-icon icon-blue"><i class="fa-solid fa-headset"></i></div>
+                    <div class="menu-texts">
+                        <div class="menu-title" data-i18n="support">Qo'llab-quvvatlash</div>
+                        <div class="menu-sub" data-i18n="support_sub">24/7 yordam chati orqali bog'laning</div>
+                    </div>
+                </div>
+                <i class="fa-solid fa-chevron-right menu-arrow" style="color: var(--text-gray); font-size: 12px;"></i>
+            </div>
+
+            <div class="menu-item">
+                <div class="menu-left">
+                    <div class="menu-icon icon-orange"><i class="fa-solid fa-moon"></i></div>
+                    <div class="menu-texts">
+                        <div class="menu-title" data-i18n="night_mode">Tungi rejim</div>
+                        <div class="menu-sub" data-i18n="night_sub">Yorug' rejimga o'tish</div>
+                    </div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="themeToggle" checked onchange="toggleTheme(this)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="glass-tab-bar">
+        <div class="active-indicator" id="tabIndicator"></div>
+
+        <div class="tab-item active" onclick="switchPage(0)">
+            <i class="fa-solid fa-house"></i>
+            <span class="tab-title" data-i18n="tab_home">Bosh sahifa</span>
+        </div>
+        <div class="tab-item" onclick="switchPage(1)">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <span class="tab-title" data-i18n="tab_history">Tarix</span>
+        </div>
+        <div class="tab-item" onclick="switchPage(2)">
+            <i class="fa-solid fa-gear"></i>
+            <span class="tab-title" data-i18n="tab_settings">Sozlamalar</span>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram?.WebApp;
+        if (tg) tg.expand();
+
+        // SPLASH SCREEN ANIMATSIYASI
+        function initSplashScreen() {
+            const logoContainer = document.getElementById('splash-logo');
+            const text = "IDSavdo";
+            
+            text.split('').forEach((char, index) => {
+                const span = document.createElement('span');
+                span.innerText = char;
+                span.classList.add('sand-char');
+                if (index < 2) span.classList.add('id-text');
+                else span.classList.add('savdo-text');
+
+                const randX = (Math.random() - 0.5) * 300 + 'px';
+                const randY = (Math.random() - 0.5) * 300 + 'px';
+                const randZ = (Math.random() - 0.5) * 300 + 'px';
+                const randRot = (Math.random() - 0.5) * 360 + 'deg';
+                const delay = (index * 0.08).toFixed(2) + 's';
+
+                span.style.setProperty('--x', randX);
+                span.style.setProperty('--y', randY);
+                span.style.setProperty('--z', randZ);
+                span.style.setProperty('--r', randRot);
+                span.style.setProperty('--delay', delay);
+
+                logoContainer.appendChild(span);
+            });
+
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                splash.style.opacity = '0';
+                splash.style.visibility = 'hidden';
+            }, 1800);
+        }
+
+        initSplashScreen();
+
+        // SAHIFALAR VA OVAL INDIKATORNI SILIQ ALMASHTIRISH
+        function switchPage(index) {
+            // Vibro bosilishi
+            if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
+
+            // 1. Ko'k oval indikatorni surish (0%, 100%, 200%)
+            const indicator = document.getElementById('tabIndicator');
+            if (indicator) {
+                indicator.style.transform = `translateX(${index * 100}%)`;
+            }
+
+            // 2. Tab matnlari va ikonkalarini faollashtirish
+            document.querySelectorAll('.glass-tab-bar .tab-item').forEach((item, i) => {
+                item.classList.toggle('active', i === index);
+            });
+
+            // 3. Sahifani silliq ko'rsatish
+            const pageNames = ['home', 'history', 'settings'];
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active-page');
+            });
+
+            const targetPage = document.getElementById(`page-${pageNames[index]}`);
+            if (targetPage) {
+                targetPage.classList.add('active-page');
+            }
+        }
+
+        // TELEGRAM USER MA'LUMOTLARI
+        if (tg?.initDataUnsafe?.user) {
+            const user = tg.initDataUnsafe.user;
+            const fullName = user.first_name + (user.last_name ? ' ' + user.last_name : '');
+            const username = user.username ? `@${user.username}` : `ID: ${user.id}`;
+
+            document.getElementById('home-user-name').innerText = fullName;
+            document.getElementById('home-user-username').innerText = username;
+            document.getElementById('settings-user-name').innerText = fullName;
+            document.getElementById('settings-user-id').innerText = user.id;
+
+            if (user.photo_url) {
+                document.getElementById('home-user-avatar').src = user.photo_url;
+                document.getElementById('settings-user-avatar').src = user.photo_url;
+            }
+        }
+
+        // TARJIMALAR
+        const translations = {
+            uz: {
+                balance: "BALANS", cashback: "KESHBEK", deposit: "Hisobni to'ldirish", promo: "Bonus kodlar",
+                support: "Qo'llab-quvvatlash", tab_home: "Bosh sahifa", tab_history: "Tarix", tab_settings: "Sozlamalar",
+                history_title: "Tarix", tab_orders: "Buyurtmalar", tab_finance: "Moliya", filter_all: "Barchasi",
+                filter_done: "Bajarildi", filter_pending: "Kutilmoqda", filter_canceled: "Bekor qilingan",
+                no_transactions: "Tranzaksiyalar yo'q", language: "TIL", services: "XIZMATLAR",
+                invite_friends: "Do'stlarni taklif qilish", invite_sub: "Bonus tangalar yutib oling",
+                promo_codes: "Chegirma kodlar", promo_sub: "Kashbek sarflab chegirma kodi yarating",
+                support_sub: "24/7 yordam chati orqali bog'laning", night_mode: "Tungi rejim", night_sub: "Yorug' rejimga o'tish"
+            },
+            ru: {
+                balance: "БАЛАНС", cashback: "КЭШБЭК", deposit: "Пополнить", promo: "Промокоды",
+                support: "Поддержка", tab_home: "Главная", tab_history: "История", tab_settings: "Настройки",
+                history_title: "История", tab_orders: "Заказы", tab_finance: "Финансы", filter_all: "Все",
+                filter_done: "Выполнено", filter_pending: "В ожидании", filter_canceled: "Отменено",
+                no_transactions: "Транзакций нет", language: "ЯЗЫК", services: "УСЛУГИ",
+                invite_friends: "Пригласить друзей", invite_sub: "Получайте бонусы за друзей",
+                promo_codes: "Промокоды", promo_sub: "Создайте промокод за кэшбэк",
+                support_sub: "Свяжитесь 24/7 по любым вопросам", night_mode: "Ночной режим", night_sub: "Переключить на светлый режим"
+            },
+            en: {
+                balance: "BALANCE", cashback: "CASHBACK", deposit: "Top Up", promo: "Promo Codes",
+                support: "Support", tab_home: "Home", tab_history: "History", tab_settings: "Settings",
+                history_title: "History", tab_orders: "Orders", tab_finance: "Finance", filter_all: "All",
+                filter_done: "Completed", filter_pending: "Pending", filter_canceled: "Canceled",
+                no_transactions: "No transactions", language: "LANGUAGE", services: "SERVICES",
+                invite_friends: "Invite Friends", invite_sub: "Earn bonus coins for invites",
+                promo_codes: "Promo Codes", promo_sub: "Create promo code with cashback",
+                support_sub: "Contact 24/7 support chat", night_mode: "Night Mode", night_sub: "Switch to light mode"
+            }
+        };
+
+        function switchHistoryTab(type) {
+            if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+            document.getElementById('btn-orders').classList.toggle('active', type === 'orders');
+            document.getElementById('btn-finance').classList.toggle('active', type === 'finance');
+        }
+
+        function changeLanguage(lang) {
+            if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
+            document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`lang-${lang}`).classList.add('active');
+
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[lang][key]) {
+                    el.innerText = translations[lang][key];
+                }
+            });
+        }
+
+        function inviteFriends() {
+            if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+            const botUsername = "IDsavdo_bot";
+            const shareUrl = `https://t.me/share/url?url=https://t.me/${botUsername}&text=IDSavdo%20magazini%20orqali%20arzon%20va%20xavfsiz%20o'yin%20valyutalarini%20xarid%20qiling!`;
+            if (tg && tg.openTelegramLink) tg.openTelegramLink(shareUrl);
+            else window.open(shareUrl, '_blank');
+        }
+
+        function openPromoModal() {
+            if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
+            alert("Chegirma kodlar bo'limi tez orada ishga tushadi!");
+        }
+
+        function openSupport() {
+            if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+            const supportUrl = "https://t.me/IDsavdo_support";
+            if (tg && tg.openTelegramLink) tg.openTelegramLink(supportUrl);
+            else window.open(supportUrl, '_blank');
+        }
+
+        function toggleTheme(checkbox) {
+            if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+            document.body.classList.toggle('light-mode', !checkbox.checked);
+        }
+
+        function copyUserId() {
+            const userId = document.getElementById('settings-user-id').innerText;
+            navigator.clipboard.writeText(userId);
+            if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            alert("ID nusxalandi: " + userId);
+        }
+
+        function selectProduct(productName) {
+            if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+            if (tg) tg.sendData(JSON.stringify({ action: 'select_product', name: productName }));
+        }
+
+        function tgAction(type) {
+            if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+            if (tg) tg.sendData(JSON.stringify({ action: type }));
+        }
+    </script>
+</body>
+</html>
+
